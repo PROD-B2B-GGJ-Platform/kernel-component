@@ -33,7 +33,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class KernelApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(KernelApplication.java, args);
+        SpringApplication.run(KernelApplication.class, args);
         System.out.println("""
             
             ╔═══════════════════════════════════════════════════════════════╗
