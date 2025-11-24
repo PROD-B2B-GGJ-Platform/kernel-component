@@ -3,7 +3,6 @@ package com.platform.kernel;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -25,7 +24,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @version 10.0.0.1
  */
 @SpringBootApplication
-@EnableJpaAuditing
 @EnableCaching
 @EnableKafka
 @EnableAsync
