@@ -33,7 +33,5 @@ Write-Host "   Press Ctrl+C to stop" -ForegroundColor Gray
 Write-Host ""
 
 # Start the application
-mvn spring-boot:run `
-    -Dspring-boot.run.profiles=dev `
-    -Dspring-boot.run.jvmArguments="-Dserver.port=$port"
+& mvn spring-boot:run "-Dspring-boot.run.profiles=dev" "-Dspring-boot.run.jvmArguments=-Dserver.port=$port"
 
