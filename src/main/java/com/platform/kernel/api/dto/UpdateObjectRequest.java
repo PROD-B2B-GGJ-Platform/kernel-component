@@ -1,15 +1,15 @@
 package com.platform.kernel.api.dto;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 /**
- * Request DTO for updating object
+ * DTO for updating an object
  */
 @Data
 @Builder
@@ -17,14 +17,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateObjectRequest {
 
-    @NotBlank(message = "Object name is required")
-    private String objectName;
+    @NotNull(message = "Data is required")
+    private Map<String, Object> data;
 
-    @NotNull(message = "Object data is required")
-    private JsonNode data;
-
-    private String changeDescription;
-
-    private JsonNode metadata;
+    private String changeReason;
 }
-
