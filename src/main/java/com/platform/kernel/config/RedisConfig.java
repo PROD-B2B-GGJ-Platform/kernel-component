@@ -24,9 +24,16 @@ import java.time.Duration;
  * - RedisCacheManager for @Cacheable annotations
  * - JSON serialization for cache values
  * - TTL for cache entries
+ * 
+ * Only enabled when Redis is available
  */
 @Configuration
 @EnableCaching
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.data.redis.enabled",
+    havingValue = "true",
+    matchIfMissing = false
+)
 public class RedisConfig {
 
     /**

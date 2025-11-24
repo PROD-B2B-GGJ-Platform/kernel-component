@@ -24,8 +24,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @version 10.0.0.1
  */
 @SpringBootApplication
-@EnableCaching
-@EnableKafka
 @EnableAsync
 @EnableScheduling
 public class KernelApplication {

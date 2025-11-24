@@ -22,8 +22,15 @@ import java.util.Map;
  * - Kafka topics for events
  * - Producer for publishing events
  * - Idempotent producer for exactly-once semantics
+ * 
+ * Only enabled when Kafka is available
  */
 @Configuration
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.kafka.enabled",
+    havingValue = "true",
+    matchIfMissing = false
+)
 public class KafkaConfig {
 
     @Value("${spring.kafka.bootstrap-servers}")
