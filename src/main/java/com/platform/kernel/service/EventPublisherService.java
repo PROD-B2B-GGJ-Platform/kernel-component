@@ -26,6 +26,11 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "spring.kafka.enabled",
+    havingValue = "true",
+    matchIfMissing = false
+)
 public class EventPublisherService {
 
     private final OutboxEventRepository outboxRepository;
