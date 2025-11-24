@@ -1,0 +1,27 @@
+environment: uat
+
+image:
+  repository: ghcr.io/prod-b2b-ggj-platform/kernel-component
+  tag: 10.0.0.1-uat-SNAPSHOT
+  pullPolicy: IfNotPresent
+
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: "2000m"
+    memory: "2Gi"
+  limits:
+    cpu: "4000m"
+    memory: "4Gi"
+
+env:
+  SPRING_PROFILES_ACTIVE: uat
+  DATABASE_URL: jdbc:postgresql://postgres-uat:5432/kernel_uat
+  REDIS_HOST: redis-uat
+  KAFKA_BOOTSTRAP_SERVERS: kafka-uat:9092
+
+ingress:
+  enabled: true
+  host: kernel-uat.gograbjob.internal
+

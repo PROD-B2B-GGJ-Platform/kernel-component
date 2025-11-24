@@ -1,0 +1,247 @@
+spring:
+  application:
+    name: kernel-component
+  
+  profiles:
+    active: dev
+  
+  # Database Configuration
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/kernel_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: KernelHikariPool
+  
+  # JPA/Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  
+  # Flyway (Database Migrations)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 2000ms
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        max.in.flight.requests.per.connection: 1
+        enable.idempotence: true
+    consumer:
+      group-id: kernel-component-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: '*'
+  
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000 # 1 hour
+  
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+# Server Configuration
+server:
+  port: 8083
+  shutdown: graceful
+  compression:
+    enabled: true
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Graceful Shutdown
+spring.lifecycle:
+  timeout-per-shutdown-phase: 30s
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      cluster: kernel-cluster
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      redis:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+      
+      kafka:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+      
+      metadata:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        sliding-window-size: 20
+  
+  retry:
+    instances:
+      redis:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+      
+      kafka:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+      
+      metadata:
+        max-attempts: 3
+        wait-duration: 1s
+  
+  bulkhead:
+    instances:
+      database:
+        max-concurrent-calls: 20
+        max-wait-duration: 1s
+      
+      redis:
+        max-concurrent-calls: 10
+        max-wait-duration: 500ms
+  
+  timelimiter:
+    instances:
+      redis:
+        timeout-duration: 5s
+      
+      kafka:
+        timeout-duration: 10s
+      
+      metadata:
+        timeout-duration: 10s
+
+# OpenAPI/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.platform.kernel: DEBUG
+    org.springframework.web: INFO
+    org.springframework.data: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Application-Specific Configuration
+kernel:
+  cache:
+    ttl-minutes: 60
+    metadata-ttl-minutes: 120
+  
+  events:
+    enabled: true
+    kafka:
+      topics:
+        object-created: platform.kernel.object.created
+        object-updated: platform.kernel.object.updated
+        object-deleted: platform.kernel.object.deleted
+        relationship-created: platform.kernel.relationship.created
+        relationship-deleted: platform.kernel.relationship.deleted
+    outbox:
+      enabled: true
+      poll-interval-ms: 5000
+      batch-size: 100
+  
+  versioning:
+    enabled: true
+    store-diffs: true
+  
+  metadata:
+    sync:
+      enabled: true
+      refresh-interval-minutes: 30
+  
+  cleanup:
+    enabled: true
+    deleted-objects-retention-days: 90
+    published-events-retention-days: 30

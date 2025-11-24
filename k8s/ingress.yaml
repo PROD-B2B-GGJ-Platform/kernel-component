@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kernel-component
+  labels:
+    app: kernel-component
+    component: kernel
+    cluster: kernel-cluster
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - kernel.gograbjob.com
+      secretName: kernel-tls
+  rules:
+    - host: kernel.gograbjob.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kernel-component
+                port:
+                  number: 8083

@@ -1,0 +1,27 @@
+environment: dev
+
+image:
+  repository: ghcr.io/prod-b2b-ggj-platform/kernel-component
+  tag: 10.0.0.1-dev-SNAPSHOT
+  pullPolicy: Always
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "1Gi"
+  limits:
+    cpu: "2000m"
+    memory: "2Gi"
+
+env:
+  SPRING_PROFILES_ACTIVE: dev
+  DATABASE_URL: jdbc:postgresql://postgres-dev:5432/kernel_dev
+  REDIS_HOST: redis-dev
+  KAFKA_BOOTSTRAP_SERVERS: kafka-dev:9092
+
+ingress:
+  enabled: true
+  host: kernel-dev.gograbjob.internal
+

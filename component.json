@@ -1,0 +1,40 @@
+{
+  "id": "kernel-component",
+  "name": "Kernel Component",
+  "version": "10.0.0.1",
+  "description": "Core object storage engine with versioning, relationships, and event bus",
+  "cluster": "kernel-cluster",
+  "type": "core",
+  "author": "B2B Platform Team",
+  "license": "Proprietary",
+  "technology": {
+    "language": "Java",
+    "framework": "Spring Boot",
+    "version": "17"
+  },
+  "dependencies": [
+    {
+      "name": "PostgreSQL",
+      "version": "15.0+",
+      "required": true
+    },
+    {
+      "name": "Redis",
+      "version": "7.0+",
+      "required": true
+    },
+    {
+      "name": "Kafka",
+      "version": "3.5+",
+      "required": true
+    }
+  ],
+  "apis": {
+    "rest": "/api/v1/kernel",
+    "health": "/actuator/health",
+    "metrics": "/actuator/prometheus"
+  },
+  "ports": {
+    "http": 8083
+  }
+}

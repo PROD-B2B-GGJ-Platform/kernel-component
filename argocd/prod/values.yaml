@@ -1,0 +1,37 @@
+environment: prod
+
+image:
+  repository: ghcr.io/prod-b2b-ggj-platform/kernel-component
+  tag: 10.0.0.1
+  pullPolicy: IfNotPresent
+
+replicaCount: 10
+
+resources:
+  requests:
+    cpu: "4000m"
+    memory: "4Gi"
+  limits:
+    cpu: "8000m"
+    memory: "8Gi"
+
+env:
+  SPRING_PROFILES_ACTIVE: prod
+  DATABASE_URL: jdbc:postgresql://postgres-prod:5432/kernel_prod
+  REDIS_HOST: redis-prod
+  KAFKA_BOOTSTRAP_SERVERS: kafka-prod:9092
+
+ingress:
+  enabled: true
+  host: kernel.gograbjob.com
+  tls:
+    enabled: true
+    secretName: kernel-tls
+
+autoscaling:
+  enabled: true
+  minReplicas: 10
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
