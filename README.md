@@ -53,6 +53,10 @@ kernel-component/
 - Redis 7+
 - Kafka 3.5+
 
+**📖 For detailed environment setup (including Maven installation), see:**
+- **[Environment Setup Guide](docs/public/ENVIRONMENT-SETUP.md)** - Complete guide for Windows/Linux/Mac
+- **Quick Setup Script:** Run `.\scripts\setup-environment.ps1` (Windows) or `./scripts/setup-environment.sh` (Linux/Mac)
+
 ### **Build**
 
 ```bash
