@@ -15,16 +15,16 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop  # Auto-create schema from JPA entities for H2
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        use_sql_comments: true
   
-  # Flyway for H2
+  # Flyway (disabled for H2 dev mode - using JPA schema generation)
   flyway:
-    enabled: true
-    baseline-on-migrate: true
+    enabled: false
   
   # Redis (optional in dev)
   data:
