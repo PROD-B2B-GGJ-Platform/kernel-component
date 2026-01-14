@@ -13,7 +13,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
-      maximum-pool-size: 20
+      maximum-pool-size: 5
       minimum-idle: 5
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -56,7 +56,7 @@ spring:
   
   # Kafka Configuration
   kafka:
-    enabled: true  # Enable Kafka for EventPublisherService
+    enabled: false  # Enable Kafka for EventPublisherService
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -89,7 +89,7 @@ spring:
 
 # Server Configuration
 server:
-  port: 8083
+  port: 8000
   shutdown: graceful
   compression:
     enabled: true
@@ -195,7 +195,7 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
-    enabled: true
+    enabled: false
     operations-sorter: method
     tags-sorter: alpha
   show-actuator: true
@@ -229,7 +229,7 @@ kernel:
         relationship-created: platform.kernel.relationship.created
         relationship-deleted: platform.kernel.relationship.deleted
     outbox:
-      enabled: true
+      enabled: false
       poll-interval-ms: 5000
       batch-size: 100
   

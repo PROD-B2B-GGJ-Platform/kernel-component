@@ -22,31 +22,43 @@ import java.util.Map;
  * Service for publishing events to Kafka
  * 
  * Uses Transactional Outbox Pattern for reliability
+ * 
+ * When Kafka is disabled, events are only stored in outbox (no publishing)
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-    name = "spring.kafka.enabled",
-    havingValue = "true",
-    matchIfMissing = false
-)
 public class EventPublisherService {
 
     private final OutboxEventRepository outboxRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Value("${spring.kafka.enabled:false}")
+    private boolean kafkaEnabled;
 
-    @Value("${kernel.events.kafka.topics.object-created}")
+    @Value("${kernel.events.kafka.topics.object-created:platform.kernel.object.created}")
     private String objectCreatedTopic;
 
-    @Value("${kernel.events.kafka.topics.object-updated}")
+    @Value("${kernel.events.kafka.topics.object-updated:platform.kernel.object.updated}")
     private String objectUpdatedTopic;
 
-    @Value("${kernel.events.kafka.topics.object-deleted}")
+    @Value("${kernel.events.kafka.topics.object-deleted:platform.kernel.object.deleted}")
     private String objectDeletedTopic;
 
     @Value("${kernel.events.outbox.batch-size:100}")
     private int batchSize;
+    
+    // Constructor - KafkaTemplate is optional
+    public EventPublisherService(
+        OutboxEventRepository outboxRepository,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) KafkaTemplate<String, Object> kafkaTemplate
+    ) {
+        this.outboxRepository = outboxRepository;
+        this.kafkaTemplate = kafkaTemplate;
+        
+        if (kafkaTemplate == null) {
+            log.info("Kafka is disabled - events will only be stored in outbox (not published)");
+        }
+    }
 
     /**
      * Publish object created event (via Outbox)
@@ -134,10 +146,15 @@ public class EventPublisherService {
 
     /**
      * Process pending outbox events (scheduled job)
+     * Only runs if Kafka is enabled
      */
     @Scheduled(fixedDelayString = "${kernel.events.outbox.poll-interval-ms:5000}")
     @Transactional
     public void processOutboxEvents() {
+        if (!kafkaEnabled || kafkaTemplate == null) {
+            return; // Skip if Kafka is disabled
+        }
+        
         log.trace("Processing outbox events...");
         
         // Get pending events
@@ -165,10 +182,15 @@ public class EventPublisherService {
 
     /**
      * Retry failed events (scheduled job)
+     * Only runs if Kafka is enabled
      */
     @Scheduled(fixedDelayString = "${kernel.events.outbox.poll-interval-ms:5000}")
     @Transactional
     public void retryFailedEvents() {
+        if (!kafkaEnabled || kafkaTemplate == null) {
+            return; // Skip if Kafka is disabled
+        }
+        
         List<OutboxEvent> retriableEvents = outboxRepository.findReadyForRetry(
             LocalDateTime.now(),
             org.springframework.data.domain.Pageable.ofSize(batchSize)

@@ -1,30 +1,26 @@
 spring:
-  # H2 Database for Development
+  # PostgreSQL Database for Development (using Docker PostgreSQL)
   datasource:
-    url: jdbc:h2:mem:kernel_dev;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-  
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      settings:
-        web-allow-others: true
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/gograbjob_b2b}
+    username: ${DATABASE_USERNAME:gograbjob}
+    password: ${DATABASE_PASSWORD:gograbjob_dev_password}
+    driver-class-name: org.postgresql.Driver
   
   jpa:
     hibernate:
-      ddl-auto: create-drop  # Auto-create schema from JPA entities for H2
+      ddl-auto: validate  # Use validate mode with PostgreSQL (schema exists via Flyway)
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         use_sql_comments: true
   
-  # Flyway (disabled for H2 dev mode - using JPA schema generation)
+  # Flyway (enabled for PostgreSQL dev mode - schema managed by migrations)
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
   
   # Redis (disabled in dev)
   data:
