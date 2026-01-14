@@ -73,6 +73,12 @@ BEGIN
     RAISE NOTICE '=== SEEDING TECHCORP LEARNING PORTAL DATA ===';
     RAISE NOTICE 'Tenant ID: %', v_tenant_id;
     
+    -- Check if V7 migration has already run (check for CRS-001 course)
+    IF EXISTS (SELECT 1 FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'COURSE' AND object_code = 'CRS-001') THEN
+        RAISE NOTICE 'V7 migration already completed. Skipping seed data insertion.';
+        RETURN;
+    END IF;
+    
     -- Get Employee IDs (match by employee_code pattern or name from master data)
     SELECT id INTO v_emp_david_miller FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-001' LIMIT 1;
     SELECT id INTO v_emp_mike_johnson FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-002' LIMIT 1;
@@ -112,40 +118,48 @@ BEGIN
     RAISE NOTICE '1. Creating Courses...';
     
     -- Course 1: Java Fundamentals
-    v_course_java_fundamentals := gen_random_uuid();
-    INSERT INTO ggj_kernel_objects (
-        id, tenant_id, object_type_code, object_code, data, status, version,
-        created_at, created_by, modified_at, modified_by
-    ) VALUES (
-        v_course_java_fundamentals,
-        v_tenant_id,
-        'COURSE',
-        'CRS-001',
-        jsonb_build_object(
-            'course_code', 'CRS-001',
-            'course_name', 'Java Fundamentals',
-            'description', 'Comprehensive introduction to Java programming language covering core concepts, OOP principles, and best practices.',
-            'category', 'TECHNICAL',
-            'level', 'BEGINNER',
-            'duration_hours', 40,
-            'credits', 3.0,
-            'format', 'INSTRUCTOR_LED',
-            'instructor_id', v_emp_alex_chen,
-            'department_id', v_dept_backend,
-            'max_enrollments', 25,
-            'current_enrollments', 18,
-            'language', 'EN',
-            'is_mandatory', false,
-            'is_active', true,
-            'status', 'PUBLISHED',
-            'created_date', CURRENT_DATE,
-            'last_reviewed_date', CURRENT_DATE - INTERVAL '30 days',
-            'next_review_date', CURRENT_DATE + INTERVAL '6 months'
-        ),
-        'ACTIVE', 1,
-        CURRENT_TIMESTAMP, 'system@techcorp.com',
-        CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+    -- Check if already exists
+    SELECT id INTO v_course_java_fundamentals FROM ggj_kernel_objects 
+    WHERE tenant_id = v_tenant_id AND object_type_code = 'COURSE' AND object_code = 'CRS-001' LIMIT 1;
+    
+    IF v_course_java_fundamentals IS NULL THEN
+        v_course_java_fundamentals := gen_random_uuid();
+        INSERT INTO ggj_kernel_objects (
+            id, tenant_id, object_type_code, object_code, data, status, version,
+            created_at, created_by, modified_at, modified_by
+        ) VALUES (
+            v_course_java_fundamentals,
+            v_tenant_id,
+            'COURSE',
+            'CRS-001',
+            jsonb_build_object(
+                'course_code', 'CRS-001',
+                'course_name', 'Java Fundamentals',
+                'description', 'Comprehensive introduction to Java programming language covering core concepts, OOP principles, and best practices.',
+                'category', 'TECHNICAL',
+                'level', 'BEGINNER',
+                'duration_hours', 40,
+                'credits', 3.0,
+                'format', 'INSTRUCTOR_LED',
+                'instructor_id', v_emp_alex_chen,
+                'department_id', v_dept_backend,
+                'max_enrollments', 25,
+                'current_enrollments', 18,
+                'language', 'EN',
+                'is_mandatory', false,
+                'is_active', true,
+                'status', 'PUBLISHED',
+                'created_date', CURRENT_DATE,
+                'last_reviewed_date', CURRENT_DATE - INTERVAL '30 days',
+                'next_review_date', CURRENT_DATE + INTERVAL '6 months'
+            ),
+            'ACTIVE', 1,
+            CURRENT_TIMESTAMP, 'system@techcorp.com',
+            CURRENT_TIMESTAMP, 'system@techcorp.com'
+        );
+    ELSE
+        RAISE NOTICE 'Course CRS-001 already exists, skipping.';
+    END IF;
     
     -- Course 2: Advanced React & Node.js
     v_course_react_advanced := gen_random_uuid();

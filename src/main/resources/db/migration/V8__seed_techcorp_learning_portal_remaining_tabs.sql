@@ -54,6 +54,14 @@ BEGIN
     RAISE NOTICE '=== SEEDING TECHCORP LEARNING PORTAL - REMAINING TABS ===';
     RAISE NOTICE 'Tenant ID: %', v_tenant_id;
     
+    -- Check if V8 migration has already run (check for multiple objects to be safe)
+    IF EXISTS (SELECT 1 FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'ORG_UNIT' AND object_code = 'ORG-ENG')
+       AND EXISTS (SELECT 1 FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'ORG_UNIT' AND object_code = 'ORG-ENG-BE')
+       AND EXISTS (SELECT 1 FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'COMPLIANCE_REQUIREMENT' AND object_code = 'COMP-001') THEN
+        RAISE NOTICE 'V8 migration already completed. Skipping seed data insertion.';
+        RETURN;
+    END IF;
+    
     -- Get Employee IDs
     SELECT id INTO v_emp_john_smith FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-016' LIMIT 1;
     SELECT id INTO v_emp_maria_garcia FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-017' LIMIT 1;
@@ -69,15 +77,28 @@ BEGIN
     SELECT id INTO v_dept_sales FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'SAL' LIMIT 1;
     SELECT id INTO v_dept_hr FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'HR' LIMIT 1;
     
-    -- Get Course IDs from V2 migration (by object_code)
+    -- Get Course IDs from V7 migration (by object_code)
     SELECT id INTO v_course_java_fundamentals FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'COURSE' AND object_code = 'CRS-001' LIMIT 1;
     SELECT id INTO v_course_security_awareness FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'COURSE' AND object_code = 'CRS-005' LIMIT 1;
     SELECT id INTO v_course_aws_certified FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'COURSE' AND object_code = 'CRS-003' LIMIT 1;
     
-    -- Get Skill IDs from V2 migration (by object_code)
+    -- Get Skill IDs from V7 migration (by object_code)
     SELECT id INTO v_skill_java FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'SKILL' AND object_code = 'SKILL-001' LIMIT 1;
     SELECT id INTO v_skill_react FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'SKILL' AND object_code = 'SKILL-002' LIMIT 1;
     SELECT id INTO v_skill_aws FROM ggj_kernel_objects WHERE tenant_id = v_tenant_id AND object_type_code = 'SKILL' AND object_code = 'SKILL-003' LIMIT 1;
+    
+    -- Validate required data exists (V7 must run first)
+    IF v_course_java_fundamentals IS NULL OR v_course_security_awareness IS NULL OR v_course_aws_certified IS NULL THEN
+        RAISE WARNING 'Some courses not found. V7 migration may not have completed. Skipping V8 data that depends on courses.';
+    END IF;
+    
+    IF v_skill_java IS NULL OR v_skill_react IS NULL OR v_skill_aws IS NULL THEN
+        RAISE WARNING 'Some skills not found. V7 migration may not have completed. Skipping V8 data that depends on skills.';
+    END IF;
+    
+    IF v_emp_mike_johnson IS NULL OR v_emp_alex_chen IS NULL OR v_emp_sarah_director IS NULL THEN
+        RAISE EXCEPTION 'Required employees not found! Ensure Workforce data exists for EMP-002, EMP-014, EMP-005.';
+    END IF;
     
     -- ============================================================================
     -- 9. ORG_UNIT (Organizational Units - 5 units)
@@ -85,63 +106,79 @@ BEGIN
     RAISE NOTICE '9. Creating Org Units...';
     
     -- Org Unit 1: Engineering Division
-    v_org_unit_engineering := gen_random_uuid();
-    INSERT INTO ggj_kernel_objects (
-        id, tenant_id, object_type_code, object_code, data, status, version,
-        created_at, created_by, modified_at, modified_by
-    ) VALUES (
-        v_org_unit_engineering,
-        v_tenant_id,
-        'ORG_UNIT',
-        'ORG-ENG',
-        jsonb_build_object(
-            'unit_code', 'ORG-ENG',
-            'unit_name', 'Engineering Division',
-            'description', 'Complete engineering organization including backend, frontend, DevOps, QA, and Data Engineering teams.',
-            'unit_type', 'DIVISION',
-            'manager_id', v_emp_mike_johnson,
-            'level', 1,
-            'path', '/Engineering',
-            'cost_center', 'CC-200',
-            'headcount', 45,
-            'status', 'ACTIVE',
-            'is_active', true,
-            'created_date', CURRENT_DATE - INTERVAL '200 days'
-        ),
-        'ACTIVE', 1,
-        CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
-        CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+    -- Check if already exists
+    SELECT id INTO v_org_unit_engineering FROM ggj_kernel_objects 
+    WHERE tenant_id = v_tenant_id AND object_type_code = 'ORG_UNIT' AND object_code = 'ORG-ENG' LIMIT 1;
+    
+    IF v_org_unit_engineering IS NULL THEN
+        v_org_unit_engineering := gen_random_uuid();
+        INSERT INTO ggj_kernel_objects (
+            id, tenant_id, object_type_code, object_code, data, status, version,
+            created_at, created_by, modified_at, modified_by
+        ) VALUES (
+            v_org_unit_engineering,
+            v_tenant_id,
+            'ORG_UNIT',
+            'ORG-ENG',
+            jsonb_build_object(
+                'unit_code', 'ORG-ENG',
+                'unit_name', 'Engineering Division',
+                'description', 'Complete engineering organization including backend, frontend, DevOps, QA, and Data Engineering teams.',
+                'unit_type', 'DIVISION',
+                'manager_id', v_emp_mike_johnson,
+                'level', 1,
+                'path', '/Engineering',
+                'cost_center', 'CC-200',
+                'headcount', 45,
+                'status', 'ACTIVE',
+                'is_active', true,
+                'created_date', CURRENT_DATE - INTERVAL '200 days'
+            ),
+            'ACTIVE', 1,
+            CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
+            CURRENT_TIMESTAMP, 'system@techcorp.com'
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
+    ELSE
+        RAISE NOTICE 'Org Unit ORG-ENG already exists, skipping.';
+    END IF;
     
     -- Org Unit 2: Backend Engineering Team
-    v_org_unit_backend := gen_random_uuid();
-    INSERT INTO ggj_kernel_objects (
-        id, tenant_id, object_type_code, object_code, data, status, version,
-        created_at, created_by, modified_at, modified_by
-    ) VALUES (
-        v_org_unit_backend,
-        v_tenant_id,
-        'ORG_UNIT',
-        'ORG-ENG-BE',
-        jsonb_build_object(
-            'unit_code', 'ORG-ENG-BE',
-            'unit_name', 'Backend Engineering Team',
-            'description', 'Backend development team responsible for server-side logic, APIs, and database management.',
-            'unit_type', 'TEAM',
-            'parent_unit_id', v_org_unit_engineering,
-            'manager_id', v_emp_alex_chen,
-            'level', 2,
-            'path', '/Engineering/Backend',
-            'cost_center', 'CC-210',
-            'headcount', 15,
-            'status', 'ACTIVE',
-            'is_active', true,
-            'created_date', CURRENT_DATE - INTERVAL '180 days'
-        ),
-        'ACTIVE', 1,
-        CURRENT_TIMESTAMP - INTERVAL '180 days', 'system@techcorp.com',
-        CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+    -- Check if already exists
+    SELECT id INTO v_org_unit_backend FROM ggj_kernel_objects 
+    WHERE tenant_id = v_tenant_id AND object_type_code = 'ORG_UNIT' AND object_code = 'ORG-ENG-BE' LIMIT 1;
+    
+    IF v_org_unit_backend IS NULL THEN
+        v_org_unit_backend := gen_random_uuid();
+        INSERT INTO ggj_kernel_objects (
+            id, tenant_id, object_type_code, object_code, data, status, version,
+            created_at, created_by, modified_at, modified_by
+        ) VALUES (
+            v_org_unit_backend,
+            v_tenant_id,
+            'ORG_UNIT',
+            'ORG-ENG-BE',
+            jsonb_build_object(
+                'unit_code', 'ORG-ENG-BE',
+                'unit_name', 'Backend Engineering Team',
+                'description', 'Backend development team responsible for server-side logic, APIs, and database management.',
+                'unit_type', 'TEAM',
+                'parent_unit_id', v_org_unit_engineering,
+                'manager_id', v_emp_alex_chen,
+                'level', 2,
+                'path', '/Engineering/Backend',
+                'cost_center', 'CC-210',
+                'headcount', 15,
+                'status', 'ACTIVE',
+                'is_active', true,
+                'created_date', CURRENT_DATE - INTERVAL '180 days'
+            ),
+            'ACTIVE', 1,
+            CURRENT_TIMESTAMP - INTERVAL '180 days', 'system@techcorp.com',
+            CURRENT_TIMESTAMP, 'system@techcorp.com'
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
+    ELSE
+        RAISE NOTICE 'Org Unit ORG-ENG-BE already exists, skipping.';
+    END IF;
     
     -- Org Unit 3: Frontend Engineering Team
     v_org_unit_frontend := gen_random_uuid();
@@ -170,7 +207,11 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '180 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+    ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
+    
+    -- Get the ID if it was inserted or already exists
+    SELECT id INTO v_org_unit_frontend FROM ggj_kernel_objects 
+    WHERE tenant_id = v_tenant_id AND object_type_code = 'ORG_UNIT' AND object_code = 'ORG-ENG-FE' LIMIT 1;
     
     -- Org Unit 4: Sales Department Unit
     INSERT INTO ggj_kernel_objects (
@@ -197,7 +238,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+    ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Org Unit 5: HR Department Unit
     INSERT INTO ggj_kernel_objects (
@@ -225,7 +266,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 5 org units';
     
@@ -261,7 +302,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Compliance 2: AWS Certification (Industry Standard)
     INSERT INTO ggj_kernel_objects (
@@ -290,7 +331,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '100 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Compliance 3: Java Certification (Company Policy)
     INSERT INTO ggj_kernel_objects (
@@ -319,7 +360,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '80 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 3 compliance requirements';
     
@@ -351,7 +392,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '30 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Assignment Schedule 2: Maria Garcia - Security Awareness (Completed)
     INSERT INTO ggj_kernel_objects (
@@ -402,7 +443,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '10 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Assignment Schedule 4: John Smith - AWS Certification (Overdue)
     INSERT INTO ggj_kernel_objects (
@@ -427,7 +468,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '90 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Assignment Schedule 5: Maria Garcia - AWS Certification (In Progress)
     INSERT INTO ggj_kernel_objects (
@@ -452,7 +493,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '20 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 5 assignment schedules';
     
@@ -486,7 +527,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '30 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Skills Gap 2: Ryan Park - React (Gap: 3 levels)
     INSERT INTO ggj_kernel_objects (
@@ -513,7 +554,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '25 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Skills Gap 3: Maria Garcia - AWS (Gap: 1 level)
     INSERT INTO ggj_kernel_objects (
@@ -540,7 +581,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '20 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Skills Gap 4: John Smith - AWS (Gap: 2 levels)
     INSERT INTO ggj_kernel_objects (
@@ -567,7 +608,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '15 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Skills Gap 5: Ryan Park - Java (Gap: 1 level - Resolved)
     INSERT INTO ggj_kernel_objects (
@@ -619,7 +660,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '10 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 6 skills gap analyses';
     
@@ -658,7 +699,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '150 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Performance Mapping 2: Engineering Manager
     INSERT INTO ggj_kernel_objects (
@@ -689,7 +730,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '120 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Performance Mapping 3: Backend Developer
     INSERT INTO ggj_kernel_objects (
@@ -719,7 +760,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '100 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 3 performance mappings';
     
@@ -753,7 +794,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '90 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Project 2: Employee Onboarding Automation
     INSERT INTO ggj_kernel_objects (
@@ -780,7 +821,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '60 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Project 3: Skills Development Initiative
     INSERT INTO ggj_kernel_objects (
@@ -807,7 +848,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '30 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Project 4: Compliance Training Rollout
     INSERT INTO ggj_kernel_objects (
@@ -865,7 +906,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '200 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Administration 2: Training Policy Document
     INSERT INTO ggj_kernel_objects (
@@ -889,7 +930,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '180 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     -- Administration 3: Learning Portal Audit Log
     INSERT INTO ggj_kernel_objects (
@@ -913,7 +954,7 @@ BEGIN
         'ACTIVE', 1,
         CURRENT_TIMESTAMP - INTERVAL '15 days', 'system@techcorp.com',
         CURRENT_TIMESTAMP, 'system@techcorp.com'
-    );
+        ) ON CONFLICT (tenant_id, object_type_code, object_code) DO NOTHING;
     
     RAISE NOTICE '   Created 3 administration records';
     
