@@ -1,9 +1,10 @@
 spring:
-  # PostgreSQL Database for Development (using Docker PostgreSQL)
+  # PostgreSQL Database for Development - HARDENED
+  # Explicitly set to gograbjob_b2b - NO environment variable overrides
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/gograbjob_b2b}
-    username: ${DATABASE_USERNAME:gograbjob}
-    password: ${DATABASE_PASSWORD:gograbjob_dev_password}
+    url: jdbc:postgresql://localhost:5432/gograbjob_b2b
+    username: gograbjob
+    password: gograbjob_dev_password
     driver-class-name: org.postgresql.Driver
   
   jpa:

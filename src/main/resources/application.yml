@@ -5,11 +5,12 @@ spring:
   profiles:
     active: dev
   
-  # Database Configuration
+  # Database Configuration - HARDENED
+  # Explicitly set to gograbjob_b2b - NO environment variable overrides
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/gograbjob_b2b}
-    username: ${DATABASE_USERNAME:gograbjob}
-    password: ${DATABASE_PASSWORD:gograbjob_dev_password}
+    url: jdbc:postgresql://localhost:5432/gograbjob_b2b
+    username: gograbjob
+    password: gograbjob_dev_password
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 30000
@@ -33,12 +34,14 @@ spring:
         order_inserts: true
         order_updates: true
   
-  # Flyway (Database Migrations)
+  # Flyway (Database Migrations) - HARDENED
+  # Uses the same datasource as Spring (gograbjob_b2b) - NO separate Flyway datasource
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
     validate-on-migrate: false  # Disabled - checksums updated manually
+    # Flyway will use the datasource configured above (gograbjob_b2b)
   
   # Redis Configuration
   data:

@@ -60,14 +60,20 @@ DECLARE
     v_cert_java_developer UUID;
     v_cert_react_certified UUID;
 BEGIN
-    -- Get TechCorp tenant ID from existing employees
-    SELECT DISTINCT tenant_id INTO v_tenant_id 
-    FROM ggj_employees 
-    WHERE employee_code LIKE 'EMP-%'
-    LIMIT 1;
+    -- Get TechCorp tenant ID from existing employees (if workforce module exists)
+    -- Otherwise use default TechCorp tenant ID
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ggj_employees') THEN
+        SELECT DISTINCT tenant_id INTO v_tenant_id 
+        FROM ggj_employees 
+        WHERE employee_code LIKE 'EMP-%'
+        LIMIT 1;
+    END IF;
     
+    -- If tenant ID not found, use default TechCorp tenant ID
+    -- This is the standard TechCorp tenant UUID
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'TechCorp tenant not found! Ensure Workforce data exists.';
+        v_tenant_id := '123e4567-e89b-12d3-a456-426614174001'::UUID;
+        RAISE NOTICE 'Workforce module not found. Using default TechCorp tenant ID: %', v_tenant_id;
     END IF;
     
     RAISE NOTICE '=== SEEDING TECHCORP LEARNING PORTAL DATA ===';
@@ -80,37 +86,46 @@ BEGIN
     END IF;
     
     -- Get Employee IDs (match by employee_code pattern or name from master data)
-    SELECT id INTO v_emp_david_miller FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-001' LIMIT 1;
-    SELECT id INTO v_emp_mike_johnson FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-002' LIMIT 1;
-    SELECT id INTO v_emp_lisa_wang FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-003' LIMIT 1;
-    SELECT id INTO v_emp_tom_brown FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-004' LIMIT 1;
-    SELECT id INTO v_emp_sarah_director FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-005' LIMIT 1;
-    SELECT id INTO v_emp_rachel_green FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-012' LIMIT 1;
-    SELECT id INTO v_emp_alex_chen FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-014' LIMIT 1;
-    SELECT id INTO v_emp_jessica_wong FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-015' LIMIT 1;
-    SELECT id INTO v_emp_john_smith FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-016' LIMIT 1;
-    SELECT id INTO v_emp_maria_garcia FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-017' LIMIT 1;
-    SELECT id INTO v_emp_james_wilson FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-018' LIMIT 1;
-    SELECT id INTO v_emp_anna_taylor FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-019' LIMIT 1;
-    SELECT id INTO v_emp_ryan_park FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-020' LIMIT 1;
-    SELECT id INTO v_emp_sophia_lee FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-021' LIMIT 1;
-    SELECT id INTO v_emp_daniel_kim FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-022' LIMIT 1;
-    SELECT id INTO v_emp_michael_brown FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-023' LIMIT 1;
-    SELECT id INTO v_emp_sarah_connor FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-024' LIMIT 1;
+    -- Get employee IDs from workforce module if it exists, otherwise use NULL (will be handled in data)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ggj_employees') THEN
+        SELECT id INTO v_emp_david_miller FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-001' LIMIT 1;
+        SELECT id INTO v_emp_mike_johnson FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-002' LIMIT 1;
+        SELECT id INTO v_emp_lisa_wang FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-003' LIMIT 1;
+        SELECT id INTO v_emp_tom_brown FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-004' LIMIT 1;
+        SELECT id INTO v_emp_sarah_director FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-005' LIMIT 1;
+        SELECT id INTO v_emp_rachel_green FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-012' LIMIT 1;
+        SELECT id INTO v_emp_alex_chen FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-014' LIMIT 1;
+        SELECT id INTO v_emp_jessica_wong FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-015' LIMIT 1;
+        SELECT id INTO v_emp_john_smith FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-016' LIMIT 1;
+        SELECT id INTO v_emp_maria_garcia FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-017' LIMIT 1;
+        SELECT id INTO v_emp_james_wilson FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-018' LIMIT 1;
+        SELECT id INTO v_emp_anna_taylor FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-019' LIMIT 1;
+        SELECT id INTO v_emp_ryan_park FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-020' LIMIT 1;
+        SELECT id INTO v_emp_sophia_lee FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-021' LIMIT 1;
+        SELECT id INTO v_emp_daniel_kim FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-022' LIMIT 1;
+        SELECT id INTO v_emp_michael_brown FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-023' LIMIT 1;
+        SELECT id INTO v_emp_sarah_connor FROM ggj_employees WHERE tenant_id = v_tenant_id AND employee_code = 'EMP-024' LIMIT 1;
+    ELSE
+        RAISE NOTICE 'Workforce module not found. Employee references will be NULL.';
+    END IF;
     
-    -- Get Department IDs (match by department_code)
-    SELECT id INTO v_dept_engineering FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG' LIMIT 1;
-    SELECT id INTO v_dept_backend FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-BE' LIMIT 1;
-    SELECT id INTO v_dept_frontend FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-FE' LIMIT 1;
-    SELECT id INTO v_dept_devops FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-OPS' LIMIT 1;
-    SELECT id INTO v_dept_qa FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-QA' LIMIT 1;
-    SELECT id INTO v_dept_sales FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'SAL' LIMIT 1;
-    SELECT id INTO v_dept_marketing FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'MKT' LIMIT 1;
-    SELECT id INTO v_dept_hr FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'HR' LIMIT 1;
-    
-    RAISE NOTICE 'Found % employees and % departments', 
-        (SELECT COUNT(*) FROM ggj_employees WHERE tenant_id = v_tenant_id),
-        (SELECT COUNT(*) FROM ggj_departments WHERE tenant_id = v_tenant_id);
+    -- Get Department IDs (match by department_code) - only if workforce module exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ggj_departments') THEN
+        SELECT id INTO v_dept_engineering FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG' LIMIT 1;
+        SELECT id INTO v_dept_backend FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-BE' LIMIT 1;
+        SELECT id INTO v_dept_frontend FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-FE' LIMIT 1;
+        SELECT id INTO v_dept_devops FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-OPS' LIMIT 1;
+        SELECT id INTO v_dept_qa FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'ENG-QA' LIMIT 1;
+        SELECT id INTO v_dept_sales FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'SAL' LIMIT 1;
+        SELECT id INTO v_dept_marketing FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'MKT' LIMIT 1;
+        SELECT id INTO v_dept_hr FROM ggj_departments WHERE tenant_id = v_tenant_id AND department_code = 'HR' LIMIT 1;
+        
+        RAISE NOTICE 'Found % employees and % departments', 
+            COALESCE((SELECT COUNT(*) FROM ggj_employees WHERE tenant_id = v_tenant_id), 0),
+            COALESCE((SELECT COUNT(*) FROM ggj_departments WHERE tenant_id = v_tenant_id), 0);
+    ELSE
+        RAISE NOTICE 'Workforce module not found. Department references will be NULL.';
+    END IF;
     
     -- ============================================================================
     -- 1. COURSES (8 professional courses aligned with TechCorp needs)
